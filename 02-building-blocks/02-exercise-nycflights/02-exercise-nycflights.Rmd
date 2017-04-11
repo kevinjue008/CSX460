@@ -49,6 +49,13 @@ Plot a histogram of arrival delays and departure delays
 
 ```{r}
 #if you haven't loaded the packages in question 1, go and do so now
+
+#read the csv file into r as a data.table
+#below assumes that the csx460 folder and it's related subfolders are in the default working directory of your rstudio,
+#if not then you'll need to change the WD (working directory)
+setwd('~/csx460/02-building-blocks/02-exercise-nycflights/data/')
+flights <- setDT(read.csv('flights.csv'))
+
 #create data.table with relevant data by selecting the columns we want, and then using melt to get them in long form
 hist_da <- melt(setDT(data.frame(flights[,c(6,9)])))
 
@@ -67,6 +74,13 @@ Plot a scatterplot of date vs arrival delay
 
 ```{r}
 #if you haven't loaded the packages from question 1, go and do so now
+
+#read the csv file into r as a data.table
+#below assumes that the csx460 folder and it's related subfolders are in the default working directory of your rstudio,
+#if not then you'll need to change the WD (working directory)
+setwd('~/csx460/02-building-blocks/02-exercise-nycflights/data/')
+flights <- setDT(read.csv('flights.csv'))
+
 #not much to say, run a scatterplot in ggplot2, that's it
 ggplot(flights[,c('day','arr_delay')], aes(x= day, y= arr_delay)) + geom_point(shape=1)
 ```
@@ -79,10 +93,22 @@ Create a `table`, counting the flights by origin airports and carrier.
 
 ```{r}
 #if you haven't loaded the packages from question 1, go and do so now
-#use dplyr:  group_by on origin and carrier (didn't see an airport so I assume that you were talking about the origin)
+
+#read the csv file into r as a data.table
+#below assumes that the csx460 folder and it's related subfolders are in the default working directory of your rstudio,
+#if not then you'll need to change the WD (working directory)
+setwd('~/csx460/02-building-blocks/02-exercise-nycflights/data/')
+flights <- setDT(read.csv('flights.csv'))
+
+#use dplyr:  group_by on origin and carrier
 #this will change the two columns to factors, causing your summarise to sum along them.  use n() to count the rows.
 flights_count <- flights %>% group_by(origin, carrier) %>% summarise(num_flights = n())
 
+#change to data.table as required in original problem
+setDT(flights_count)
+
+#check to see that it is a data.table
+str(flights_count)
 ```
 
 
