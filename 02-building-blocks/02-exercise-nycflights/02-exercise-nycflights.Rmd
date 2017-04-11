@@ -128,7 +128,8 @@ weather <- setDT(read.csv('weather.csv'))
 #Perform joins as appropriate, note that this will create alot of duplicate columns that are superfluous i.e.
 #multiple day time and hour fields, so if i were to work with the data I would use a select() to get rid of them.
 #However the assignment was to create a data table containing all columns from all tables with one record per row.
-#so, that's what i did
+#so, that's what i did: notes:join on both time_hour and origin for weather.  airports needs to be joined twice, once
+#on origin to pull in geographical data for origin, and a second time on destination to pull in geo data for dest.
 
 flights_join <- left_join(flights, planes, by = 'tailnum', suffix = c(".of_flights",".of_planes")) %>%
                 left_join(weather, by = c('origin', 'time_hour'), suffix = c(".of_flights",".of_weather")) %>%
