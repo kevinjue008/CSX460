@@ -63,7 +63,7 @@ SSE_mean <- sum((flights_join$arr_delay - arr_delay_mean)^2, na.rm = TRUE)
 base_lm <- lm(arr_delay ~ month.of_flights + day.of_flights +	dep_time + sched_dep_time + sched_arr_time + flight + tailnum	+ origin + dest +	air_time	+ distance +	hour.of_flights + minute +	time_hour +	year.of_planes + engines + seats + speed + month.of_weather + day.of_weather + hour.of_weather + temp + dewp + humid + wind_dir +	wind_speed + wind_gust + precip + pressure + visib +	name.of_origin + lat.of_origin + lon.of_origin + alt.of_origin + tz.of_origin + name.of_dest + lat.of_dest + lon.of_dest + alt.of_dest + tz.of_dest + dst.of_dest +year.of_flights + year, data = flights_join,  na.rm = TRUE)
 
 
-SSE <- sum((flights_join$arr_delay - arr_delay_mean)^2, na.rm = TRUE)
+SSE <- sum(flights$arr_delay[i] - modelfit(x[i]))^2, na.rm = TRUE)
 
 ```
 
