@@ -1,7 +1,7 @@
 ---
 title: "NYCFlights: Arrival Delay Regression Model (Open Ended Variation)"
-author: "[Your Name]"
-date: "[Today's Date]"
+author: "[Kevin Jue]"
+date: "[4/18/2017]"
 output: html_document
 ---
 
@@ -21,17 +21,63 @@ Break the process down into steps and create a codeblock for each step.
 (You can start with the data that you created last week.)
 
 
-## Step 1: [Step Name] 
+## Step 1: [Create Data] 
 
-```{r "Step 1: [Step Name]" }
+```{r "Step 1: Setup/Read/Transform Dataset" }
+#install the packages in order to complete the operation
+library(readr)
+library(magrittr)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+
+#read the data into R
+setwd('~/csx460/02-building-blocks/02-exercise-nycflights/data/')
+flights <- setDT(read.csv('flights.csv'))
+planes <- setDT(read.csv('planes.csv'))
+airports <- setDT(read.csv('airports.csv'))
+weather <- setDT(read.csv('weather.csv'))
+
+#perform the necessary joins in order to make a rectangular data table
+
+flights_join <- left_join(flights, planes, by = 'tailnum', suffix = c(".of_flights",".of_planes")) %>%
+                left_join(weather, by = c('origin', 'time_hour'), suffix = c(".of_flights",".of_weather")) %>%
+                left_join(airports, by = c('origin' = 'faa'), suffix = c(".of_flights",".of_origin")) %>%
+                left_join(airports, by = c('dest' = 'faa'), suffix = c(".of_origin",".of_dest"))
+
 
 ```
 
-## Step 2: ...
+## Step 2: Create Naive Model
+```{r "Step 2: Set a baseline of model performance by calculating the mean and the SSE of it"}
 
+arr_delay_mean <- mean(flights_join$arr_delay, na.rm = TRUE)
+SSE_mean <- sum((flights_join$arr_delay - arr_delay_mean)^2, na.rm = TRUE)
+
+```
+
+
+## Step 3: Calculate a base linear regression
+```{r "Step 3: As a first step run the simplest linear regression with all variables as predictors"}
+
+base_lm <- lm(arr_delay ~ month.of_flights + day.of_flights +	dep_time + sched_dep_time + sched_arr_time + flight + tailnum	+ origin + dest +	air_time	+ distance +	hour.of_flights + minute +	time_hour +	year.of_planes + engines + seats + speed + month.of_weather + day.of_weather + hour.of_weather + temp + dewp + humid + wind_dir +	wind_speed + wind_gust + precip + pressure + visib +	name.of_origin + lat.of_origin + lon.of_origin + alt.of_origin + tz.of_origin + name.of_dest + lat.of_dest + lon.of_dest + alt.of_dest + tz.of_dest + dst.of_dest +year.of_flights + year, data = flights_join,  na.rm = TRUE)
+
+
+SSE <- sum((flights_join$arr_delay - arr_delay_mean)^2, na.rm = TRUE)
+
+```
+
+
+## Step 4: Compare the two models
+```{r "Step 4: Runs SSE for both models and see which has a lower value, this should be a very basic test for determining which model is a better fit}
+
+#if i could get the linear model in step 3 to run without having a memory overload, we would look at the values with the highest correlation, and use those to create a new linear regression, leaving the less/non correlated values out.  Then we would check the new model using the SSE test we created to see how it compares against the naive model (the mean).
+
+```
 
 
 # Question:
 
 Is this a good model?  (Write your answer here.)
 
+Step 4 would determine this.  If it can handily beat the naive model I would say it is an improvement.
