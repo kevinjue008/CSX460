@@ -49,10 +49,9 @@ flights_join <- left_join(flights, planes, by = 'tailnum', suffix = c(".of_fligh
 ```
 
 ## Step 2: Create Naive Model
-```{r "Step 2: Set a baseline of model performance by calculating the mean and the SSE of it"}
+```{r "Step 2: Set a baseline of model performance by calculating the mean"}
 
 arr_delay_mean <- mean(flights_join$arr_delay, na.rm = TRUE)
-SSE_mean <- sum((flights_join$arr_delay - arr_delay_mean)^2, na.rm = TRUE)
 
 ```
 
@@ -60,18 +59,37 @@ SSE_mean <- sum((flights_join$arr_delay - arr_delay_mean)^2, na.rm = TRUE)
 ## Step 3: Calculate a base linear regression
 ```{r "Step 3: As a first step run the simplest linear regression with all variables as predictors"}
 
-base_lm <- lm(arr_delay ~ month.of_flights + day.of_flights +	dep_time + sched_dep_time + sched_arr_time + flight + tailnum	+ origin + dest +	air_time	+ distance +	hour.of_flights + minute +	time_hour +	year.of_planes + engines + seats + speed + month.of_weather + day.of_weather + hour.of_weather + temp + dewp + humid + wind_dir +	wind_speed + wind_gust + precip + pressure + visib +	name.of_origin + lat.of_origin + lon.of_origin + alt.of_origin + tz.of_origin + name.of_dest + lat.of_dest + lon.of_dest + alt.of_dest + tz.of_dest + dst.of_dest +year.of_flights + year, data = flights_join,  na.rm = TRUE)
+base_lm <- lm(arr_delay ~ year.of_flights + month.of_flights + day.of_flights + dep_time + sched_dep_time + dep_delay + arr_time + sched_arr_time + flight + air_time + distance + hour.of_flights + minute + year.of_planes + engines + seats + speed + year + month.of_weather + day.of_weather + hour.of_weather + temp + dewp + humid + wind_dir + wind_speed + wind_gust + precip + pressure + visib + lat.of_origin + lon.of_origin + alt.of_origin + tz.of_origin + lat.of_dest + lon.of_dest + alt.of_dest + tz.of_dest, data = flights_join)
 
+summary(base_lm)
 
-SSE <- sum(flights$arr_delay[i] - modelfit(x[i]))^2, na.rm = TRUE)
 
 ```
+
+## Step 4: Refine the regression
+```{r "Step 4: Remove the lower significance variables from the regression and rerun"}
+
+refined_lm <- lm(arr_delay ~ sched_dep_time + dep_delay + arr_time + sched_arr_time + flight + air_time + distance + hour.of_flights + wind_speed + wind_gust + tz.of_dest, data = flights_join)
+
+summary(refined_lm)
+
+```
+
 
 
 ## Step 4: Compare the two models
 ```{r "Step 4: Runs SSE for both models and see which has a lower value, this should be a very basic test for determining which model is a better fit}
 
-#if i could get the linear model in step 3 to run without having a memory overload, we would look at the values with the highest correlation, and use those to create a new linear regression, leaving the less/non correlated values out.  Then we would check the new model using the SSE test we created to see how it compares against the naive model (the mean).
+
+#calculate the sum of squared errors, or the sum of the square of the residuals
+SSE_mean <- sum((flights_join$arr_delay - arr_delay_mean)^2, na.rm = TRUE)
+
+#calculate the sum of squared errors, or the sum of the square of the residuals
+SSE_base <- sum(base_lm$residuals^2)
+
+#calculate the sum of squared errors, or the sum of the square of the residuals
+SSE_refined <- sum(refined_lm$residuals^2)
+
 
 ```
 
@@ -80,4 +98,4 @@ SSE <- sum(flights$arr_delay[i] - modelfit(x[i]))^2, na.rm = TRUE)
 
 Is this a good model?  (Write your answer here.)
 
-Step 4 would determine this.  If it can handily beat the naive model I would say it is an improvement.
+I wouldn't say good, but it is better than the mean.  So it is a stronger predictor model than the naive model, so it is an improvement.
