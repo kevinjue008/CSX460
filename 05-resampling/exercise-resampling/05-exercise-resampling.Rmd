@@ -1,7 +1,7 @@
 ---
 title: "Resampling"
-author: "Your Name Here"
-date: "October 5, 2015"
+author: "Kevin Jue"
+date: "May 8, 2017"
 output: html_document
 ---
 
@@ -15,17 +15,98 @@ output: html_document
 - Calculte the `sd( mean(x) )` using the **using 10-fold resampling**.  Create your own folds, show your work.
 - Calculte the `sd( mean(x) )` using the **using 10 bootstrap sample**.  Create your own folds, show your work. 
 
+#create Functions
 ```{r}
-set.seed(1) 
-x <- runif(20,1,20)
+## set seed and create a dataframe
+set.seed(1984) #can be any number
+k <- 10  # how many folds we want to create
+n <- 40  # how large a sample size we want.  note that n/k should be an positive integer for this function to work
+p <- 1   # lower bound
+q <- 100 # upper bound
 
-sd_cv # <- Your work here 
+#call packages
+library(magrittr)
 
-sd_boot # <- Your work here
+x <- runif(n,p,q) %>% as.data.frame  #first variable is the num of obs, the other two give us the range to create
+
+```
+
+#calculate the mean of x
+```{r}
+#calculate the mean of x
+x_mean <- mean(x[,])
+
+```
+
+#create the sd_cv function for n-fold resampling (in this case n=10)
+```{r}
+#create function that does n-fold resampling
+sd_cv <- function(x) {
+  y <- x
+  #create appropriate folds in x
+  folds <- as.data.frame(1:k)
+  colnames(folds) <- c("folds")
+  for(i in seq(1:k)){
+    folds$folds[i] <- list(x[-((1+((nrow(x)/k)*(i-1))):((nrow(x)/k)*i)),])
+  }
+  # the above function maps each sampling set into each row of the data frame as an n-tupled list
+  #now calculate the mean on each element of the dataframe (so the mean of the whole dataset) using lapply function
+  #then calculate the SD
+  folds1 <- as.data.frame(1:k)
+  colnames(folds1) <- c("mean")
+  for(j in seq(1:k)){
+    folds1$mean[j] <- lapply(folds$folds[j], mean)
+  }
+  #convert/reduce from list to vector
+  folds_sd <- as.numeric(unlist(folds1))
+  SD_folds <- sd(folds_sd)
+  return(SD_folds)
+}
+  
+#test the function to see if it works
+
+test_cv <- sd_cv(x)
+
+```
+
+#create sd_boot function for bootstrap resampling
+```{r}
+#create function that does bootstrap resampling
+sd_boot <- function(x) {
+  y <- x
+  #create appropriate folds in x
+  folds <- as.data.frame(1:k)
+  colnames(folds) <- c("folds")
+  for(i in seq(1:k)){
+    folds$folds[i] <- list(x[sample(nrow(x),nrow(x), replace = TRUE),])
+  }
+  # the above function maps each sampling set into each row of the data frame as an n-tupled list
+  #now calculate the mean on each element of the dataframe (so the mean of the whole dataset) using lapply function
+  #then calculate the SD
+  folds1 <- as.data.frame(1:k)
+  colnames(folds1) <- c("mean")
+  for(j in seq(1:k)){
+    folds1$mean[j] <- lapply(folds$folds[j], mean)
+  }
+  #convert/reduce from list to vector
+  folds_sd <- as.numeric(unlist(folds1))
+  SD_folds <- sd(folds_sd)
+  return(SD_folds)
+}
+#test the function to see if it works
+
+test_boot <- sd_boot(x)
+
 ```
 
 
 ### Your answers here: 
 
-- sd_cv   is: `r sd_cv`
-- sd_boot is: `r sd_boot`
+### - sd_cv   is: 
+```{r}
+sd_cv
+```
+### - sd_boot is: 
+```{r}
+sd_boot
+```

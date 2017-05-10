@@ -1,13 +1,22 @@
 ---
 title: "Classification Mettrics"
-author: "Christopher Brown"
-date: "October 5, 2015"
+author: "Kevin Jue"
+date: "5/9/2017"
 output: html_document
 ---
 
 
 **KNIT YOUR DOCUMENT AS *HTML* AND SUBMIT IT AND THE `Rmd` file.** 
  
+#load packages
+```{r}
+library(readr)
+library(magrittr)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+```
+
 
 ## Classification Metrics Functions 
 
@@ -25,8 +34,129 @@ Write functions of `y` and `y_hat` to calculate the following classification met
 * Accuracy
 * Kappa
 
-```{r "definitions", echo=FALSE}
 
+### Write Functions for each of the following definitions which accept vectors y and y_hat
+```{r "definitions"}
+
+#these functions assume that a P of 0.5 is our threshold for T/F evaluation, and that y, and y_hat are both from the same dataset and same size
+
+#True Positive Rate, assumes that a P of 0.5 is our threshold
+TPR <- function(y, y_hat) {
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  observed_positive <- y1 %>% subset(y == "TRUE")
+  predicted_positive_obspos <- y1 %>% subset(y_hat1 >= 0.5 & y == "TRUE")
+  true_positive = nrow(predicted_positive_obspos)/nrow(observed_positive)
+  return(true_positive)
+  }
+
+
+#False Positive Rate
+FPR <- function(y,y_hat) {
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  observed_negative <- y1 %>% subset(y == "FALSE")
+  predicted_positive_obsneg <- y1 %>% subset(y_hat1 >= 0.5 & y == "FALSE")
+  false_positive = nrow(predicted_positive_obsneg)/nrow(observed_negative)
+  return(false_positive)
+  }
+
+
+#True Negative Rate
+TNR <- function(y,y_hat) {
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  observed_negative <- y1 %>% subset(y == "FALSE")
+  predicted_negative_obsneg <- y1 %>% subset(y_hat1 <= 0.5 & y == "FALSE")
+  true_negative = nrow(predicted_negative_obsneg)/nrow(observed_negative)
+  return(true_negative)
+  }
+
+
+#False Negative Rate
+
+FNR <- function(y,y_hat) {
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  observed_positive <- y1 %>% subset(y == "TRUE")
+  predicted_negative_obspos <- y1 %>% subset(y_hat1 <= 0.5 & y == "TRUE")
+  false_negative = nrow(predicted_negative_obspos)/nrow(observed_positive)
+  return(false_negative)
+  }
+
+#Sensitivity
+
+#Isn't the sensitivity the true positive rate? Thus:
+
+TPR <- function(y, y_hat) {
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  observed_positive <- y1 %>% subset(y == "TRUE")
+  predicted_positive_obspos <- y1 %>% subset(y_hat1 >= 0.5 & y == "TRUE")
+  true_positive = nrow(predicted_positive_obspos)/nrow(observed_positive)
+  return(true_positive)
+  }
+
+#Specificity
+
+#Isn't the specificity the true negative rate?  Thus:
+
+TNR <- function(y,y_hat) {
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  observed_negative <- y1 %>% subset(y == "FALSE")
+  predicted_negative_obsneg <- y1 %>% subset(y_hat1 <= 0.5 & y == "FALSE")
+  true_negative = nrow(predicted_negative_obsneg)/nrow(observed_negative)
+  return(true_negative)
+  }
+
+#Recall
+#also called sensitivity, or the true positive rate.  Thus:
+
+
+TPR <- function(y, y_hat) {
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  observed_positive <- y1 %>% subset(y == "TRUE")
+  predicted_positive_obspos <- y1 %>% subset(y_hat1 >= 0.5 & y == "TRUE")
+  true_positive = nrow(predicted_positive_obspos)/nrow(observed_positive)
+  return(true_positive)
+  }
+
+
+#Precision
+#also called positive predicted value
+precision <- function(y,y_hat) {
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  true_positive <- y1 %>% subset(y_hat1 >= 0.5 & y == "TRUE")
+  false_positive <- y1 %>% subset(y_hat1 >= 0.5 & y == "FALSE")
+ppv <- nrow(true_positive) / (nrow(true_positive) + nrow(false_positive))
+return(ppv)  
+  }
+
+#Prevalence
+prevalence <- function(y,y_hat){
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  delays <- y1 %>% subset(y == "TRUE")
+  preva <- nrow(delays)/nrow(y1)
+  return(preva)
+  }
+
+#Accuraccy
+accuracy <- function(y,y_hat){
+  y1<- as.data.frame(y)
+  y1$y_hat1 <- y_hat
+  true_positive <- y1 %>% subset(y_hat1 >= 0.5 & y == "TRUE")
+  true_negative <- y1 %>% subset(y_hat1 <= 0.5 & y == "FALSE")
+ accu <- (nrow(true_positive)+nrow(true_negative))/nrow(y1) 
+ return(accu)
+}
+
+
+#Kappa
+#what is e?  it should be (accuracy - E)/ (1- e)  but not sure what e is
 
 ```
 
@@ -38,8 +168,53 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 Use the function(s) above to calculate the metrics for your late arrival model that
 you created last week. 
 
+
+## first load in the logistic regression data to get y_hat, then load in the flights data to get y
 ```{r "evaluations"}
 
+### read in the logistic regression from last week (y_hat)
+setwd('~/csx460/04-logistic-regression/04-exercise-nycflights-logistic')
+new_glm <- readRDS("new_glm")
+
+### read in the original data (y) from 3 weeks ago
+
+setwd('~/csx460/02-building-blocks/02-exercise-nycflights/data/')
+flights <- setDT(read.csv('flights.csv'))
+planes <- setDT(read.csv('planes.csv'))
+airports <- setDT(read.csv('airports.csv'))
+weather <- setDT(read.csv('weather.csv'))
+
+#perform the necessary joins in order to make a rectangular data table
+
+flights_join <- left_join(flights, planes, by = 'tailnum', suffix = c(".of_flights",".of_planes")) %>%
+                left_join(weather, by = c('origin', 'time_hour'), suffix = c(".of_flights",".of_weather")) %>%
+                left_join(airports, by = c('origin' = 'faa'), suffix = c(".of_flights",".of_origin")) %>%
+                left_join(airports, by = c('dest' = 'faa'), suffix = c(".of_origin",".of_dest"))
+
+flights_join1 <- flights_join
+setDT(flights_join1)
+flights_join1[, late := factor(arr_delay >= 22)]  # this is using the data.table package to create the factor
+
+## create y and y_hat
+y <- flights_join1$late
+
+y_hat <- predict( new_glm, flights_join1, type="response")
+
+## run all the newly created functions
+
+fnr <- FNR(y,y_hat)
+
+fpr <- FPR(y,y_hat)
+
+tnr <- TNR(y,y_hat)
+
+tpr <- TPR(y,y_hat)
+
+precision1 <- precision(y,y_hat)
+
+accuracy1 <- accuracy(y,y_hat)
+
+prevalence1 <- prevalence(y,y_hat)
 
 ```
 

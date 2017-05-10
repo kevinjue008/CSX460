@@ -147,31 +147,59 @@ odds_delay <- arr_delay_true/arr_delay_false
 
 ## change the response variable arr_delay to a factor to allow the logistic regression to be run
 
+library(data.table)
+setDT(flights_join1)
 
 flights_join1 <- flights_join
-flights_join1["arr_delay_22"] <- NA
-for(i in seq(nrow(flights_join1))){
-if(flights_join1$arr_delay[i] >= 22) {
-  flights_join1$arr_delay_22[i] <- 1
-} else {
-    flights_join1$arr_delay_22[i] <- 0
-  }
-}
+flights_join1[, late := factor(arr_delay >= 22)]  # this is using the data.table package to create the factor
 
 
 
-##convert to factor
-
-flights_join1$arr_delay_22 <-  as.factor(flights_join1$arr_delay_22)
-
-base_glm <- glm(formula = arr_delay_22 ~ year.of_flights + month.of_flights + day.of_flights + dep_time + sched_dep_time + dep_delay + arr_time + sched_arr_time + flight + air_time + distance + hour.of_flights + minute + year.of_planes + engines + seats + speed + year + month.of_weather + day.of_weather + hour.of_weather + temp + dewp + humid + wind_dir + wind_speed + wind_gust + precip + pressure + visib + lat.of_origin + lon.of_origin + alt.of_origin + tz.of_origin + lat.of_dest + lon.of_dest + alt.of_dest + tz.of_dest, family = binomial(link="logit"), data = flights_join1)
+base_glm <- glm(formula = late ~ year.of_flights + month.of_flights + day.of_flights + dep_time + sched_dep_time + dep_delay + arr_time + sched_arr_time + flight + air_time + distance + hour.of_flights + minute + year.of_planes + engines + seats + speed + year + month.of_weather + day.of_weather + hour.of_weather + temp + dewp + humid + wind_dir + wind_speed + wind_gust + precip + pressure + visib + lat.of_origin + lon.of_origin + alt.of_origin + tz.of_origin + lat.of_dest + lon.of_dest + alt.of_dest + tz.of_dest, family = binomial(link="logit"), data = flights_join1)
 
 summary(base_glm)
 
+```
 
+
+
+## Step 4: Calculate a new logistic regression
+```{r "Step 4: Refine a model with a retrained logistic regression with select predictors"}
+
+library(ggplot2)
+
+flights_join1$arr_delay %>% qplot
+
+flights_join1$late %>% qplot
+
+#updated GLM
+
+new_glm <- glm(formula = late ~ dep_delay + arr_time + distance + month.of_weather + lat.of_dest + lon.of_dest, family = binomial(link="logit"), data = flights_join1)
+
+summary(new_glm)
+
+#perform step.AIC on this model
+
+remove_na <- na.omit(new_glm)
+
+fit.step <- MASS::stepAIC(remove_na, scope = list(upper= . ~ ., lower= . ~ 1))
 
 ```
 
+
+
+## Step 4: Calculate a new logistic regression
+```{r "Step 4: Refine a model with a retrained logistic regression with select predictors"}
+
+
+preds <- predict( new_glm, flights_join1, type="response")
+qplot(preds %>% na.omit, bins=30 )
+
+#save it
+
+saveRDS(new_glm, file="new_glm")
+
+```
 # Question:
 
 Is this a good model?  (Write your answer here.)
