@@ -1,13 +1,17 @@
 ---
 title: "Caret / Recursive Partitioning"
-author: "Your Name Here"
-date: "Today's Date"
-output: pdf_document
+author: "Kevin Jue"
+date: "5/15/2017"
+output: html_document
 ---
 
 ```{r init, warning=FALSE, echo=FALSE, message=FALSE}
 library(rpart)
 library(caret)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(plotROC)
 # .. Additional libraries
 ```
 
@@ -23,7 +27,58 @@ Rebuild your logistic regression model from the previous week, this time using t
 Show all work.
 
 ```{r logistic model}
-# Your Work Here
+#import flights data
+setwd('~/csx460/02-building-blocks/02-exercise-nycflights/data/')
+flights <- setDT(read.csv('flights.csv'))
+planes <- setDT(read.csv('planes.csv'))
+airports <- setDT(read.csv('airports.csv'))
+weather <- setDT(read.csv('weather.csv'))
+
+#perform the necessary joins in order to make a rectangular data table
+
+flights_join <- left_join(flights, planes, by = 'tailnum', suffix = c(".of_flights",".of_planes")) %>%
+                left_join(weather, by = c('origin', 'time_hour'), suffix = c(".of_flights",".of_weather")) %>%
+                left_join(airports, by = c('origin' = 'faa'), suffix = c(".of_flights",".of_origin")) %>%
+                left_join(airports, by = c('dest' = 'faa'), suffix = c(".of_origin",".of_dest"))
+
+#use caret to run the same logistic regression that was run last week
+
+#create the factor to run the logistic regression
+
+flights_join1 <- flights_join
+setDT(flights_join1)
+flights_join1[, late := factor(arr_delay >= 22)]  # this is using the data.table package to create the factor
+
+
+ctrl <- trainControl(method="boot",
+                     #summaryFunction=twoClassSummary, 
+                     #classProbs=TRUE,
+                     savePredictions = TRUE)
+
+ log_model <- train(late ~ dep_delay + arr_time + distance + month.of_weather + lat.of_dest + lon.of_dest, data = flights_join1, method = "glm", family = "binomial", trControl = ctrl, na.action = na.pass)
+
+final_model <-log_model$finalModel
+summary(final_model)
+
+test <- log_model$pred
+
+#calculate predictors
+
+fit <- predict(final_model, flights_join1, type = 'response')
+qplot(fit)
+
+##calculate a confusionmatrix
+
+logit.pred <- factor((fit) > 0.5, levels=c(TRUE, FALSE))
+confusionMatrix(logit.pred, flights_join1$late)
+
+# calculate an ROC curve
+
+#couldn't get the ROC curve to work, it should look like this
+#ggplot(log_model$pred$obs, 
+#      aes(m = M, d = factor(obs, levels = c("R", "M")))) + 
+#    geom_roc(hjust = -0.4, vjust = 1.5) + coord_equal()
+
 ```
 
 
@@ -44,6 +99,7 @@ Show and describe all work
 
 ```{r rpart model}
 # Your Work Here
+
 ```
 
 
