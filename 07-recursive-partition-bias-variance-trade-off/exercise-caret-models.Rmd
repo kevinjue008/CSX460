@@ -1,0 +1,268 @@
+---
+title: "Improving Model Perfromance / Tuning Parameters"
+author: "Kevin Jue"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+## Tuning Parameter
+
+Generically and regardless of model type, what are the purposes of a model
+tuning parameters?
+
+```
+model tuning parameters allow you to specify the constraints, boundaries and procedures that a particular model, be it regression or classification, should use in evaluating the predictors and quantifying the response.  In general, these are chosen to strike a balance between maximizing the predictive accuracy of the model, while minimizing the computational load required to calculate it, and if specifying performance metrics should allow the model to be better understood / increase its interpretability
+
+```
+
+
+
+
+## Caret Models
+
+This assignment demonstrates the use of caret for constructing models. Each
+model should be built and compared using `Kappa` as the performance
+metric calculated using 10-fold repeated cross-validation with 3 folds.
+
+Using the rectangular data that you created for the NYCFlights to create a model
+for arr_delay >= 15 minutes.
+
+- glm
+- rpart
+- knn
+- C50
+- randomForest
+- adaBoost
+- Two methods of your choice from the Caret Model List (you will need to install any dependencies)
+
+Save the caret objects with the names provided.
+
+```{r}
+
+#load libraries
+library(rpart)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(plotROC)
+library(pROC)
+library(randomForest)
+library(fastAdaboost)
+library(C50)
+
+#import flights data
+setwd('~/csx460/02-building-blocks/02-exercise-nycflights/data/')
+flights <- setDT(read.csv('flights.csv'))
+planes <- setDT(read.csv('planes.csv'))
+airports <- setDT(read.csv('airports.csv'))
+weather <- setDT(read.csv('weather.csv'))
+
+#perform the necessary joins in order to make a rectangular data table
+
+flights_join <- left_join(flights, planes, by = 'tailnum', suffix = c(".of_flights",".of_planes")) %>%
+                left_join(weather, by = c('origin', 'time_hour'), suffix = c(".of_flights",".of_weather")) %>%
+                left_join(airports, by = c('origin' = 'faa'), suffix = c(".of_flights",".of_origin")) %>%
+                left_join(airports, by = c('dest' = 'faa'), suffix = c(".of_origin",".of_dest"))
+
+flights_join1 <- flights_join
+
+setDT(flights_join1)
+
+flights_join1[,late:= arr_delay >= 15]
+
+
+#change to factor, since caret doesn't like true false
+flights_join1$late <- factor(flights_join1$late, labels = c("ontime", "late"))
+
+#use caret to train the below models
+
+#GLM
+
+
+
+fitControl <- trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 3,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary
+                           )
+
+glm_logit <- train(late ~ dep_delay + arr_time + distance + month.of_weather + lat.of_dest + lon.of_dest, data = flights_join1, method = "glm", family = "binomial", trControl = fitControl, metric = "kappa", na.action = na.pass)
+
+
+summary(glm_logit)
+glmfinal <- glm_logit$finalModel
+glmpred <- predict(glmfinal, type = "response", newdata = flights_join1)
+
+qplot(glmpred)
+```
+
+
+```{r}
+#plot roc curve to check
+roc.curve <- roc(flights_join1$late, glmpred, ci=T)
+plot(roc.curve)
+
+```
+
+```{r}
+#plot confusion matrix to calculate kappa, and send the final model to fit.glm below.  this uses a threshold of 0.5 to determine late vs ontime
+glmpred_factor <- ifelse(glmpred > 0.5, "late", "ontime")
+confusionMatrix(data = glmpred_factor, reference = flights_join1$late)
+
+#kappa is 0.6929
+```
+
+```{r}
+#RPART
+
+
+fitControl <- trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 3,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary
+                           )
+
+glm_rpart <- train(late ~ dep_delay + arr_time + distance + month.of_weather + lat.of_dest + lon.of_dest, data = flights_join1, method = "rpart", tuneLength = 20, trControl = fitControl, metric = "ROC", na.action = na.rpart)
+
+glm_rpart_final <- glm_rpart$finalModel
+
+glm_rpartpred <- predict(glm_rpart_final, type = 'class', data = flights_join1$late)
+
+flights_join1_naremove <- na.omit(flights_join1$late)
+
+confusionMatrix(glm_rpartpred, reference = flights_join1_naremove)
+
+#kappa is 0.7004
+
+```
+
+
+```{r} 
+#k-nearest neighbors
+
+fitControl <- trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 3,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary
+                           )
+#remove all NA's
+flights_join1_naomit<- na.omit(flights_join1)
+
+
+glm_knn <- train(late ~ dep_delay + arr_time + distance + month.of_weather + lat.of_dest + lon.of_dest, data = flights_join1_naomit, method = "knn", tuneLength = 20, trControl = fitControl, metric = "ROC", na.action = na.pass)
+
+glm_knn_final <- glm_knn$finalModel
+glm_knn_final
+
+
+lvs <- c("ontime", "late")
+glm_knnpred <- factor(rep(lvs, times = c(623, 158)),
+                levels = rev(lvs))
+
+knn_accuracy <- postResample(pred = glm_knnpred, obs = flights_join1_naomit$late)
+knn_accuracy 
+
+#kappa is -0.047 :( wat
+
+```
+
+```{r}
+#random forest
+
+#remove NA's
+flights_join1_naomit<- na.omit(flights_join1)
+
+
+fitControl <- trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 3,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary
+                           )
+
+glm_rf <- train(late ~ dep_delay + arr_time + distance + month.of_weather + lat.of_dest + lon.of_dest, data = flights_join1_naomit, method = "rf", tuneLength = 20, trControl = fitControl, metric = "accuracy", na.action = na.pass)
+
+glm_rf
+glm_rf_final <- glm_rf$finalModel
+
+glm_rf_final
+
+
+glm_rfpred <- predict(glm_rf_final, type = 'class', data = flights_join1_naomit$late)
+
+
+rf_accuracy <- postResample(pred = glm_rfpred, obs = flights_join1_naomit$late)
+
+# kappa of 0.6826670
+```
+
+```{r}
+#C50
+
+#remove NA's
+flights_join1_naomit<- na.omit(flights_join1)
+
+
+fitControl <- trainControl(method = "cv",
+                           number = 10,
+                           repeats = 3,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary
+                           )
+c50Grid <- expand.grid(trials = c(1:9, (1:10)*10),model = c("tree", "rules"),winnow = c(TRUE, FALSE))
+
+glm_c50 <- train(late ~ dep_delay + arr_time + distance + month.of_weather + lat.of_dest + lon.of_dest, data = flights_join1_naomit, method = "C5.0", trControl = fitControl, metric = "ROC",tuneGrid = c50Grid, na.action = na.pass)
+
+summary(glm_c50)
+glm_c50_final <- glm_c50$finalModel
+glm_c50_final
+
+```
+
+
+```{r}
+#adaboost # used a much smaller dataset as the full one ran for over 45 minutes without finishing
+
+
+#remove NA's
+flights_join1_naomit<- na.omit(flights_join1)
+
+
+fitControl <- trainControl(method = "cv",
+                           number = 10,
+                           repeats = 3,
+                           classProbs = TRUE,
+                           summaryFunction = twoClassSummary
+                           )
+
+##cannot run adaboost, as it runs for over an hour and I need to turn the homework in, so ran out of time
+##glm_adaboost <- train(late ~ dep_delay + arr_time + distance + month.of_weather + lat.of_dest + lon.of_dest, data = ##flights_join1_naomit, method = "adaboost", tuneLength = 20, trControl = fitControl, metric = "ROC", na.action = ##na.pass)
+
+
+```
+
+
+
+
+```{r}
+fit.glm <-glmfinal
+fit.rpart <-glm_rpart_final
+fit.knn <- glm_knn_final
+fit.rf <- glm_rf_final
+fit.C50 <- glm_c50_final
+#fit.adaboost <- 
+#fit.myown1 <- ..
+#fit.myown2 <- ..
+```
+
+Compare the  models?
+
+Which is best?  Why?
+the best kappa appears to be generated by the rpart classification model
+```
+```
