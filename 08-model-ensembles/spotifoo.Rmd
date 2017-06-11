@@ -1,7 +1,7 @@
 ---
 title: "Customer Lifetime Value"
-author: "Christopher Brown"
-date: "May 2, 2016"
+author: "Kevin Jue"
+date: "June 10, 2017"
 output: html_document
 ---
 
@@ -27,4 +27,28 @@ For each management question, describe your process. In particular, describe:
 
 # Who Are *Spotifoo*'s best customers?
 
+Best is quite relative, but i suppose best would be the customers who have stayed with the service the longest (aka they have been paying their subscription fees the longest).  This is a contractual discrete revenue source, aka the static monthly subscription fee to the service.  We would model this using a survival model.
+
+Response:  create a survival object that has the customers start and end dates, as well as any necessary censoring (left censoring here?) for customers that are still active and use that as the response.  We want our response to show how long a customer will remain with the service, so we should have their life as the "dependent" variable.
+
+Predictors:  use the data from the 'user attributes' dataset and select some fields from the 'purchase history' and the 'product attributes' tables, like amount/sum of items purchased, and product type, or basically any fields that reflect the habits/behavior of the user. We are interested in the traits/attributes of the user, not spotifoo's products, so only choose the traits that describe the user or users behaviors in some way.
+
+Errors:  RMSE of the response duration aka how accurate did we predict how many months a user would continue to subscribe
+
+Training and test data set:  you would need to use the surv() function to create a survival object, paired with the data coming from the other tables that you would have to join on.  it would be a "wide" table, so each unique customer ID has a response (the survival object) as well as the rest of the predictors.  
+
+Modeling Techniques - Coxph or SurvFit to model the survival function.  As this is not a time series regression we can use boostrapping to handle resampling of our data set.
+
 # Customer Lifetime Value
+
+Note : in this case there are 2 distinct sources of revenue:  the static revenue stream from above and the other is the incremental purchase of products within the app. this is a contractual continuous revenue source, as customers can make purchases freely once they are a member of spotifoo.  train a model that predicts the rate of purchasing over time for a customer. converting the time subscribed (from model1) to dollars and their total purchases (past and future) to a dollar amount, then summing the results for each customer should be their CLV.  Looks like you can use a gamma gamma function to convert frequencies to dollars.  Or you could just use the average purchase price per customer, to be simple about it.
+
+response: frequency between purchases.  would need to impute this, as it is not directly found in the data
+
+predictors:  amount spent, customer id, day that spend occured
+
+error:RMSE frequency between purchases vs predicted frequency of purchases
+
+training and test data set:  create from the join of user and purchasing data.  
+
+model: i think it would be a pareto/NBD model, although this is for non-contractual, would it be okay to do this, considering that the contractual portion of the data is modeled as a survival function and separate from this?
